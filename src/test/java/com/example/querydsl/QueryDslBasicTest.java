@@ -199,4 +199,99 @@ public class QueryDslBasicTest {
 		assertThat(teamA.get(member.age.avg())).isEqualTo(15);
 		assertThat(teamB.get(member.age.avg())).isEqualTo(35);
 	}
+
+	/**
+	 * 팀A에 소속된 모든 회원을 찾아라
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void join() throws Exception {
+
+		// inner join
+		List<Member> result = queryFactory.selectFrom(member)
+			.join(member.team, team) // .innerjoin() 과 동일.
+			.where(team.name.eq("teamA"))
+			.fetch();
+
+		assertThat(result).extracting("username").containsExactly("member1", "member2");
+
+		// left join
+		List<Member> leftJoinResult = queryFactory.selectFrom(member)
+			.leftJoin(member.team, team) // left outer join
+			.where(team.name.eq("teamA"))
+			.fetch();
+
+		assertThat(leftJoinResult).extracting("username").containsExactly("member1", "member2");
+	}
+
+	/**
+	 * theta join (연관관계가 없어도 join 가능)
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void thetaJoin() throws Exception {
+		em.persist(Member.builder().username("teamA").build());
+		em.persist(Member.builder().username("teamB").build());
+
+		List<Member> result = queryFactory
+			.select(member)
+			.from(member, team) // from 절에 조인할 엔티티 목록 쓰면 됨.
+			.where(member.username.eq(team.name))
+			.fetch();
+
+		assertThat(result).extracting("username").containsExactly("teamA", "teamB");
+	}
+
+	/**
+	 * 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회(left join)
+	 * JPQL: select m, t from Member m left join m.team t on t.name = 'teamA'
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void joinOnFiltering() throws Exception {
+		List<Tuple> result = queryFactory.select(member, team) // select가 여러개이기 때문에 Tuple로 나옴
+			.from(member)
+			.leftJoin(member.team, team)
+			.on(team.name.eq("teamA"))
+			.fetch();
+
+		for (Tuple tuple : result) {
+			System.out.println(tuple);
+		}
+
+		List<Tuple> result2 = queryFactory.select(member, team) // select가 여러개이기 때문에 Tuple로 나옴
+			.from(member)
+			.leftJoin(member.team, team)
+			.where(team.name.eq("teamA"))
+			.fetch();
+
+		for (Tuple tuple : result2) {
+			System.out.println(tuple);
+		}
+	}
+
+	/**
+	 * 연관관계가 없는 엔티티 외부 조인
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void joinOnNoRelation() throws Exception {
+		em.persist(Member.builder().username("teamA").build());
+		em.persist(Member.builder().username("teamB").build());
+
+		List<Tuple> result = queryFactory
+			.select(member, team)
+			.from(member)
+			.leftJoin(team).on(member.username.eq(team.name)) // ==> ID가 아닌 on 절에 있는 것으로 join
+			// .leftJoin(member.team, team) // ==> 이게 보통의 join. ID 기반 join
+			.fetch();
+
+		for (Tuple tuple : result) {
+			System.out.println(tuple);
+		}
+	}
 }
