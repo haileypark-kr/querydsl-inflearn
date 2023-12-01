@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.List;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,9 +17,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.querydsl.entity.Member;
+import com.example.querydsl.entity.QMember;
 import com.example.querydsl.entity.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 @Transactional
@@ -294,4 +298,133 @@ public class QueryDslBasicTest {
 			System.out.println(tuple);
 		}
 	}
+
+	@PersistenceUnit
+	EntityManagerFactory emf;
+
+	/**
+	 * fetch join이 없을 때.
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void fetchJoinNo() throws Exception {
+		em.flush();
+		em.clear();
+
+		Member member1 = queryFactory
+			.selectFrom(member)
+			.where(member.username.eq("member1"))
+			.fetchOne();
+
+		// persistence context에 로딩이 되었는지 안되었는지 알려줌. 지금은 false가 나와야함.
+		boolean loaded = emf.getPersistenceUnitUtil().isLoaded(member1.getTeam());
+		assertThat(loaded).as("fetch join 미적용").isFalse();
+	}
+
+	@Test
+	@Transactional
+	public void fetchJoinUsed() throws Exception {
+		em.flush();
+		em.clear();
+
+		Member member1 = queryFactory
+			.selectFrom(member)
+			.join(member.team, team)
+			.fetchJoin() // member를 조회할 때, 연관된 team을 한 번에 조회한다. join이든 left join이든 .fetchJoin() 한 번만 붙여주면 됨.
+			.where(member.username.eq("member1"))
+			.fetchOne();
+
+		// persistence context에 로딩이 되었는지 안되었는지 알려줌. 지금은 false가 나와야함.
+		boolean loaded = emf.getPersistenceUnitUtil().isLoaded(member1.getTeam());
+		assertThat(loaded).as("fetch join 적용").isTrue();
+	}
+
+	/**
+	 * 나이가 가장 많은 회원을 조회
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void subQuery() throws Exception {
+
+		QMember memberSub = new QMember("memberSub"); // 밖의 member와 sub query 안의 member는 겹치면 안됨.
+
+		List<Member> result = queryFactory
+			.selectFrom(member)
+			.where(
+				member.age.eq(
+					JPAExpressions
+						.select(memberSub.age.max())
+						.from(memberSub)
+				)
+			).fetch();
+
+		assertThat(result).extracting("age").containsExactly(40);
+	}
+
+	/**
+	 * 나이가 평균 이상인 많은 회원을 조회
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void subQuery_goe() throws Exception {
+
+		QMember memberSub = new QMember("memberSub"); // 밖의 member와 sub query 안의 member는 겹치면 안됨.
+
+		List<Member> result = queryFactory
+			.selectFrom(member)
+			.where(
+				member.age.goe(
+					JPAExpressions
+						.select(memberSub.age.avg())
+						.from(memberSub)
+				)
+			).fetch();
+
+		assertThat(result).extracting("age").containsExactly(30, 40);
+	}
+
+	/**
+	 * select 절에 subquery 사용
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void subQuery_select() throws Exception {
+
+		QMember memberSub = new QMember("memberSub"); // 밖의 member와 sub query 안의 member는 겹치면 안됨.
+
+		List<Member> result = queryFactory
+			.selectFrom(member)
+			.where(
+				member.age.in(
+					JPAExpressions
+						.select(memberSub.age)
+						.from(memberSub)
+						.where(memberSub.age.gt(10))
+				)
+			).fetch();
+
+		assertThat(result).extracting("age").containsExactly(20, 30, 40);
+	}
+
+	@Test
+	@Transactional
+	public void subQuery_in() throws Exception {
+		QMember memberSub = new QMember("memberSub"); // 밖의 member와 sub query 안의 member는 겹치면 안됨.
+
+		List<Tuple> tuples = queryFactory
+			.select(member.username,
+				JPAExpressions
+					.select(memberSub.age.avg()).from(memberSub))
+			.from(member)
+			.fetch();
+
+		for (Tuple tuple : tuples) {
+			System.out.println(tuple);
+		}
+	}
+
 }
