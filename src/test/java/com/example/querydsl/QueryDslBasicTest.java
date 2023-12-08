@@ -21,6 +21,8 @@ import com.example.querydsl.entity.QMember;
 import com.example.querydsl.entity.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -424,6 +426,86 @@ public class QueryDslBasicTest {
 
 		for (Tuple tuple : tuples) {
 			System.out.println(tuple);
+		}
+	}
+
+	/**
+	 * select case 문 - 간단
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void basicCase() throws Exception {
+		List<String> result = queryFactory
+			.select(member.age
+				.when(10).then("열살")
+				.when(20).then("스무살")
+				.otherwise("기타")
+			)
+			.from(member)
+			.fetch();
+
+		for (String s : result) {
+			System.out.println(s);
+		}
+	}
+
+	/**
+	 * select case 문 - 복잡한 쿼리는 CaseBuilder 사용.
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void complexCase_caseBuilder() throws Exception {
+		List<String> result = queryFactory
+			.select(new CaseBuilder()
+				.when(member.age.between(0, 20)).then("0~20")
+				.when(member.age.between(21, 30)).then("21~30")
+				.otherwise("기타")
+			)
+			.from(member)
+			.fetch();
+
+		for (String s : result) {
+			System.out.println(s);
+		}
+	}
+
+	/**
+	 * select에서 상수를 리턴해야할 경우
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void constant() throws Exception {
+		List<Tuple> result = queryFactory
+			.select(member.username, Expressions.constant("A")) // querydsl의 Expressions.constant 사용하라
+			.from(member)
+			.fetch();
+
+		for (Tuple tuple : result) {
+			System.out.println(tuple);
+		}
+	}
+
+	/**
+	 * 문자열을 concat해야 하는 경우
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void string_concat() throws Exception {
+
+		// {username}_{age} 이렇게 만들고 싶다.
+		// 근데 select(member.username.concat("_").concat(member.age)) ==> 은 string + int 라서 concat이 안됨.
+		// 문자가 아닌 다른 타입들은 .stringValue() 쓰면 됨 (enum도!)
+		List<String> result = queryFactory
+			.select(member.username.concat("_").concat(member.age.stringValue())) // .stringValue() 붙여주기.
+			.from(member)
+			.fetch();
+
+		for (String s : result) {
+			System.out.println(s);
 		}
 	}
 
