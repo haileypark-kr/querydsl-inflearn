@@ -16,11 +16,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.querydsl.dto.MemberDto;
+import com.example.querydsl.dto.UserDto;
 import com.example.querydsl.entity.Member;
 import com.example.querydsl.entity.QMember;
 import com.example.querydsl.entity.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -506,6 +510,147 @@ public class QueryDslBasicTest {
 
 		for (String s : result) {
 			System.out.println(s);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void projection_one() throws Exception {
+		List<String> result = queryFactory
+			.select(member.username)
+			.from(member)
+			.fetch();
+		for (String s : result) {
+			System.out.println(s);
+		}
+		List<Member> members = queryFactory
+			.select(member)
+			.from(member)
+			.fetch();
+		for (Member s : members) {
+			System.out.println(s);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void projection_tuple() throws Exception {
+
+		List<Tuple> result = queryFactory
+			.select(member.username, member.age)
+			.from(member)
+			.fetch();
+
+		for (Tuple tuple : result) {
+			System.out.println("username = " + tuple.get(member.username));
+			System.out.println("age = " + tuple.get(member.age));
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findDtoByJPQL() throws Exception {
+		List<MemberDto> resultList = em.createQuery("select new com.example.querydsl.dto.MemberDto(m.username, m.age)"
+			+ " from Member m", MemberDto.class).getResultList();
+
+		for (MemberDto memberDto : resultList) {
+			System.out.println(memberDto);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findDtoByQueryDSL_프로퍼티세터접근() throws Exception {
+		// 기본 생성자와 setter가 있어야 함
+		List<MemberDto> result = queryFactory
+			.select(Projections.bean(MemberDto.class, member.username, member.age))
+			.from(member)
+			.fetch();
+
+		for (MemberDto memberDto : result) {
+			System.out.println(memberDto);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findDtoByQueryDSL_필드직접접근() throws Exception {
+		// setter 없어도 됨. 기본 생성자만 있으면 됨
+		List<MemberDto> result = queryFactory
+			.select(Projections.fields(MemberDto.class, member.username, member.age))
+			.from(member)
+			.fetch();
+
+		for (MemberDto memberDto : result) {
+			System.out.println(memberDto);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findDtoByQueryDSL_생성자() throws Exception {
+		// constructor에서 타입과 순서를 맞춰야 함.
+		List<MemberDto> result = queryFactory
+			.select(Projections.constructor(MemberDto.class, member.username, member.age))
+			.from(member)
+			.fetch();
+
+		for (MemberDto memberDto : result) {
+			System.out.println(memberDto);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findUserDtoByQueryDSL_필드직접접근() throws Exception {
+		List<UserDto> result = queryFactory
+			.select(Projections.fields(UserDto.class, member.username, member.age))
+			.from(member)
+			.fetch();
+
+		for (UserDto u : result) {
+			System.out.println(u);
+		}
+
+		// 필드 뒤에 .as(별칭) 사용하면 됨.
+		List<UserDto> resultAs = queryFactory
+			.select(Projections.fields(UserDto.class, member.username.as("name"), member.age))
+			.from(member)
+			.fetch();
+
+		for (UserDto u : resultAs) {
+			System.out.println(u);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findUserDtoByQueryDSL_필드직접접근_서브쿼리() throws Exception {
+		// 서브쿼리 별칭 만들 때는 ExpresstionUtils.as 쓰면 됨.
+		QMember memberSub = new QMember("memberSub");
+		List<UserDto> resultSubAs = queryFactory
+			.select(Projections.fields(UserDto.class,
+				member.username.as("name"),
+				ExpressionUtils.as(JPAExpressions.select(memberSub.age.max()).from(memberSub), "age")
+			))
+			.from(member)
+			.fetch();
+
+		for (UserDto u : resultSubAs) {
+			System.out.println(u);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void findUserDtoByQueryDSL_생성자() throws Exception {
+		List<UserDto> resultAs = queryFactory
+			.select(Projections.constructor(UserDto.class, member.username, member.age))
+			.from(member)
+			.fetch();
+
+		for (UserDto u : resultAs) {
+			System.out.println(u);
 		}
 	}
 
