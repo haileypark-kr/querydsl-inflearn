@@ -745,4 +745,61 @@ public class QueryDslBasicTest {
 		return usernameEq(usernameCond).and(ageEq(ageCond));
 	}
 
+	@Test
+	@Transactional
+	public void bulkUpdate() throws Exception {
+
+		// 영속성 컨텍스트
+		// member1 10 => member1
+		// member2 20 => member2
+		// member3 30 => member3
+		// member4 40 => member4
+
+		// DB
+		// member1 10 => 비회원
+		// member2 20 => 비회원
+		// member3 30 => 회원
+		// member4 40 => 회원
+
+		long count = queryFactory
+			.update(member)
+			.set(member.username, "비회원")
+			.where(member.age.lt(28))
+			.execute();
+
+		// 벌크 쿼리를 날리면 DB와 영속성 컨텍스트가 무조건 다르기 때문에 flush, clear 해주기.
+		em.flush();
+		em.clear();
+
+		// 아래 쿼리는 영속성 컨텍스트에서 가져오므로, DB에 있는 값과 다른 값을 가져온다.
+		List<Member> result = queryFactory
+			.selectFrom(member)
+			.fetch();
+
+		for (Member u : result) {
+			System.out.println(u);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void bulkUpdate_Add() throws Exception {
+		queryFactory
+			.update(member)
+			.set(member.age, member.age.add(1))
+			.execute();
+		queryFactory
+			.update(member)
+			.set(member.age, member.age.multiply(2))
+			.execute();
+	}
+
+	@Test
+	@Transactional
+	public void bulkDelete() throws Exception {
+		queryFactory
+			.delete(member)
+			.where(member.age.gt(18))
+			.execute();
+	}
 }
