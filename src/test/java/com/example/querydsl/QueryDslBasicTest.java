@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.querydsl.dto.MemberDto;
+import com.example.querydsl.dto.QMemberDto;
 import com.example.querydsl.dto.UserDto;
 import com.example.querydsl.entity.Member;
 import com.example.querydsl.entity.QMember;
@@ -646,6 +647,7 @@ public class QueryDslBasicTest {
 	public void findUserDtoByQueryDSL_생성자() throws Exception {
 		List<UserDto> resultAs = queryFactory
 			.select(Projections.constructor(UserDto.class, member.username, member.age))
+			// .select(Projections.constructor(UserDto.class, member.username, member.age, member.id)) // 컴파일 오류 안뜸.
 			.from(member)
 			.fetch();
 
@@ -654,4 +656,16 @@ public class QueryDslBasicTest {
 		}
 	}
 
+	@Test
+	@Transactional
+	public void findDtoByQueryProjection() throws Exception {
+		List<MemberDto> result = queryFactory
+			.select(new QMemberDto(member.username, member.age))
+			// .select(new QMemberDto(member.username, member.age, member.id)) // 컴파일 오류
+			.from(member)
+			.fetch();
+		for (MemberDto u : result) {
+			System.out.println(u);
+		}
+	}
 }
