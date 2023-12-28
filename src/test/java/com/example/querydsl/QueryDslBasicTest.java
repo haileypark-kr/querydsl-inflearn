@@ -802,4 +802,48 @@ public class QueryDslBasicTest {
 			.where(member.age.gt(18))
 			.execute();
 	}
+
+	/**
+	 * SQL 함수 호출 - replace
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void sqlFunction_replace() throws Exception {
+
+		// member라는 단어를 M으로 치환하여 조회하기
+		List<String> result = queryFactory
+			.select(
+				Expressions.stringTemplate("function('replace', {0}, {1}, {2})",
+					member.username, "member", "M")
+			)
+			.from(member)
+			.fetch();
+
+		for (String u : result) {
+			System.out.println(u);
+		}
+	}
+
+	/**
+	 * SQL 함수 호출 - lower
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void sqlFunction_lower() throws Exception {
+
+		// 소문자로 변경했을 때도 멤버 이름이 동일한지
+		List<String> result = queryFactory
+			.select(member.username)
+			.from(member)
+			// .where(member.username.eq(
+			// 	Expressions.stringTemplate("function('lower', {0})", member.username)))
+			.where(member.username.eq(member.username.lower()))
+			.fetch();
+
+		for (String u : result) {
+			System.out.println(u);
+		}
+	}
 }
