@@ -1,4 +1,4 @@
-package com.example.querydsl;
+package com.example.querydsl.config;
 
 import javax.persistence.EntityManager;
 

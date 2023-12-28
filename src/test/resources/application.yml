@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: local # local 프로필과 test 프로필이 다르게 동작. local 프로필에만 InitData 추가 로직 동작.
+    active: test # local 프로필과 test 프로필이 다르게 동작. local 프로필에만 InitData 추가 로직 동작.
 
   datasource:
     url: jdbc:h2:tcp://localhost/~/development/h2/querydsl
