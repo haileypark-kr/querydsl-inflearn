@@ -22,10 +22,12 @@ import com.example.querydsl.dto.UserDto;
 import com.example.querydsl.entity.Member;
 import com.example.querydsl.entity.QMember;
 import com.example.querydsl.entity.Team;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -656,6 +658,10 @@ public class QueryDslBasicTest {
 		}
 	}
 
+	/**
+	 * 프로젝션 - DTO 생성자에 @QueryProjection 어노테이션 붙여서 사용
+	 * @throws Exception
+	 */
 	@Test
 	@Transactional
 	public void findDtoByQueryProjection() throws Exception {
@@ -668,4 +674,75 @@ public class QueryDslBasicTest {
 			System.out.println(u);
 		}
 	}
+
+	/**
+	 * 동적 쿼리 사용 - BooleanBuilder
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void dynamicQuery_BooleanBuilder() throws Exception {
+		String usernameParam = "member1";
+		Integer ageParam = 10;
+
+		List<Member> result = searchMember1(usernameParam, ageParam);
+		assertThat(result.size()).isEqualTo(1);
+	}
+
+	private List<Member> searchMember1(String usernameCond, Integer ageCond) {
+
+		BooleanBuilder builder = new BooleanBuilder();
+		if (usernameCond != null) {
+			builder.and(member.username.eq(usernameCond));
+		}
+		if (ageCond != null) {
+			builder.and(member.age.eq(ageCond));
+		}
+
+		return queryFactory
+			.selectFrom(member)
+			.where(builder)
+			.fetch();
+	}
+
+	/**
+	 * 동적 쿼리 사용 - where 다중 파라미터 사용
+	 * @throws Exception
+	 */
+	@Test
+	@Transactional
+	public void dynamicQuery_where() throws Exception {
+
+		String usernameParam = "member1";
+		Integer ageParam = null;
+
+		List<Member> result = searchMember2(usernameParam, ageParam);
+		assertThat(result.size()).isEqualTo(1);
+	}
+
+	private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+		return queryFactory
+			.selectFrom(member)
+			.where(usernameEq(usernameCond), ageEq(ageCond))
+			.fetch();
+	}
+
+	private BooleanExpression usernameEq(String usernameCond) {
+		return usernameCond != null ? member.username.eq(usernameCond) : null;
+	}
+
+	private BooleanExpression ageEq(Integer ageCond) {
+		return ageCond != null ? member.age.eq(ageCond) : null;
+	}
+
+	/**
+	 * 동적쿼리 where 다중 파라미터의 엄청난 장점 - 메소드 조합이 가능.
+	 * @param usernameCond
+	 * @param ageCond
+	 * @return
+	 */
+	private BooleanExpression allEq(String usernameCond, Integer ageCond) {
+		return usernameEq(usernameCond).and(ageEq(ageCond));
+	}
+
 }
