@@ -1,5 +1,6 @@
 package com.example.querydsl.repository;
 
+import static com.example.querydsl.entity.QMember.*;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
@@ -91,5 +92,18 @@ class MemberRepositoryTest {
 		assertThat(result.getSize()).isEqualTo(3);
 		assertThat(result.getContent()).extracting("username").containsExactly("member1", "member2", "member3");
 
+	}
+
+	@Test
+	@Transactional
+	public void querydslPredicateExecutorTest() throws Exception {
+		insertInitData();
+
+		Iterable<Member> results = memberRepository.findAll(
+			member.age.between(10, 30).and(member.username.eq("member1")));
+
+		for (Member member : results) {
+			System.out.println(member);
+		}
 	}
 }
