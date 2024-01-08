@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.data.repository.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 
@@ -17,18 +18,25 @@ import com.example.querydsl.dto.QMemberTeamDto;
 import com.example.querydsl.entity.Member;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-
-import lombok.RequiredArgsConstructor;
 
 /**
  * 사용자 정의 리포지토리 구현체
  */
-@RequiredArgsConstructor
-public class MemberRepositoryImpl implements MemberRepositoryCustom {
+public class MemberRepositoryImpl extends QuerydslRepositorySupport implements MemberRepositoryCustom {
 
 	private final JPAQueryFactory jpaQueryFactory;
+
+	/**
+	 * domainClass에는 내 엔티티 클래스를 적으면 됨.
+	 * @param jpaQueryFactory
+	 */
+	public MemberRepositoryImpl(JPAQueryFactory jpaQueryFactory) {
+		super(Member.class);
+		this.jpaQueryFactory = jpaQueryFactory;
+	}
 
 	@Override
 	public List<MemberTeamDto> search(MemberSearchCondition condition) {
@@ -81,6 +89,42 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
 			.limit(pageable.getPageSize())
 			.fetchResults();
 
+		List<MemberTeamDto> content = results.getResults();
+		long total = results.getTotal();
+
+		return new PageImpl<>(content, pageable, total);
+	}
+
+	/**
+	 * QuerydslRepositorySupport 활용하여 페이징
+	 * @param condition
+	 * @param pageable
+	 * @return
+	 */
+	public Page<MemberTeamDto> searchPageSimple_QuerydslRepositorySupport(MemberSearchCondition condition,
+		Pageable pageable) {
+
+		JPQLQuery<MemberTeamDto> jpaQuery = from(member)
+			.leftJoin(member.team, team)
+			.where(
+				usernameEq(condition.getUsername()),
+				teamNameEq(condition.getTeamName()),
+				ageGoe(condition.getAgeGoe()),
+				ageLoe(condition.getAgeLoe())
+			)
+			.select(
+				new QMemberTeamDto(member.id.as("memberId"),
+					member.username,
+					member.age,
+					team.id.as("teamId"),
+					team.name.as("teamName")
+				)
+			);
+
+		JPQLQuery<MemberTeamDto> pagingQuery
+			= getQuerydsl().applyPagination(pageable, jpaQuery);
+
+		QueryResults<MemberTeamDto> results = pagingQuery.fetchResults();
 		List<MemberTeamDto> content = results.getResults();
 		long total = results.getTotal();
 
