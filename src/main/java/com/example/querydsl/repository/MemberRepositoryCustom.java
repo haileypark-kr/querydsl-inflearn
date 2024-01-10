@@ -14,8 +14,22 @@ import com.example.querydsl.dto.MemberTeamDto;
 public interface MemberRepositoryCustom {
 	List<MemberTeamDto> search(MemberSearchCondition condition);
 
+	/**
+	 * contents, count 쿼리 한 번에 요청
+	 * @param condition
+	 * @param pageable
+	 * @return
+	 */
 	Page<MemberTeamDto> searchPageSimple(MemberSearchCondition condition, Pageable pageable);
 
+	Page<MemberTeamDto> searchPageSimple_QuerydslRepositorySupport(MemberSearchCondition condition, Pageable pageable);
+
+	/**
+	 * count 쿼리 별도로 분리
+	 * @param condition
+	 * @param pageable
+	 * @return
+	 */
 	Page<MemberTeamDto> searchPageComplex(MemberSearchCondition condition, Pageable pageable);
 
 }

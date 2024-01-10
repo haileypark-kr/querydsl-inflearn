@@ -97,6 +97,7 @@ public class MemberRepositoryImpl extends QuerydslRepositorySupport implements M
 
 	/**
 	 * QuerydslRepositorySupport 활용하여 페이징
+	 * TODO sorting
 	 * @param condition
 	 * @param pageable
 	 * @return

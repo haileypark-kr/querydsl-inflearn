@@ -20,7 +20,7 @@ import lombok.ToString;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(of = {"id", "username", "age"})
+@ToString(of = {"id", "username", "age", "team"})
 public class Member {
 
 	@Id

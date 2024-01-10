@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.querydsl.dto.MemberSearchCondition;
@@ -104,6 +105,23 @@ class MemberRepositoryTest {
 
 		for (Member member : results) {
 			System.out.println(member);
+		}
+	}
+
+	@Test
+	@Transactional
+	public void searchPageSimple_QuerydslRepositorySupport() throws Exception {
+		insertInitData();
+
+		MemberSearchCondition condition = new MemberSearchCondition();
+		PageRequest pageRequest = PageRequest.of(0, 2, Sort.Direction.DESC, "age");
+
+		Page<MemberTeamDto> page = memberRepository.searchPageSimple_QuerydslRepositorySupport(condition,
+			pageRequest);
+		System.out.println("size: " + page.getSize());
+		System.out.println("total elements: " + page.getTotalElements());
+		for (MemberTeamDto memberTeamDto : page.getContent()) {
+			System.out.println(memberTeamDto);
 		}
 	}
 }
